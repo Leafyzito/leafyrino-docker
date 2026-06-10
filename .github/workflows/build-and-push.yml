@@ -21,16 +21,18 @@ jobs:
     name: "Build ${{ matrix.image-name }} builder"
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           # The Dockerfile file name will be inferred from the image-name parameter
           # If the image-name is chatterino2-xd, the Dockerfile it will look for is Dockerfile_chatterino2-xd
-          - os: ubuntu-22.04
-            image-name: chatterino2-build-ubuntu-22.04
+          # Disabled until WebEngine CI builds are stable
+          # - os: ubuntu-22.04
+          #   image-name: chatterino2-build-ubuntu-22.04
           - os: ubuntu-24.04
             image-name: chatterino2-build-ubuntu-24.04
-          - os: ubuntu-26.04
-            image-name: chatterino2-build-ubuntu-26.04
+          # - os: ubuntu-26.04
+          #   image-name: chatterino2-build-ubuntu-26.04
     env:
       C2_PLUGINS: "ON"
       C2_BUILD_WITH_QT6: "ON"
@@ -45,7 +47,7 @@ jobs:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
           tool-cache: false
-          
+
           # all of these default to true, but feel free to set to
           # "false" if necessary for your workflow
           android: true
