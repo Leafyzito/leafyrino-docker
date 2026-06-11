@@ -68,7 +68,6 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log into docker registry
-        if: github.event_name == 'push'
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
         with:
           registry: ${{ env.REGISTRY }}
@@ -83,8 +82,10 @@ jobs:
           load: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           file: ./chatterino-docker/Dockerfile_${{ matrix.image-name }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}
-          cache-to: type=inline
+          cache-from: |
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       # Build Chatterino master with this docker image
       - name: Test docker image
@@ -105,8 +106,10 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           file: ./chatterino-docker/Dockerfile_${{ matrix.image-name }}
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}
-          cache-to: type=inline
+          cache-from: |
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
   build-c2-generic:
     name: "Build ${{ matrix.image-name }} generic"

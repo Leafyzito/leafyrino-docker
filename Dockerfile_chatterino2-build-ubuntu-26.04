@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # cmake
 FROM ubuntu:26.04 AS build-cmake
 
@@ -246,15 +247,32 @@ cmake --install .
 EOF
 
 # Qt WebEngine must be built separately (Chromium); static builds are unsupported.
-RUN <<EOF
+# Cache mount persists ninja progress across CI retries (see workflow buildcache tag).
+RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-26.04,sharing=locked \
+    <<EOF
 set -e
 
-mkdir /tmp/qt/build-webengine
+mkdir -p /tmp/qt/build-webengine
 cd /tmp/qt/build-webengine
 
-/usr/local-qt/bin/qt-configure-module /tmp/qt/qt5/qtwebengine
+if [ ! -f CMakeCache.txt ]; then
+    /usr/local-qt/bin/qt-configure-module /tmp/qt/qt5/qtwebengine
+fi
+EOF
 
+RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-26.04,sharing=locked \
+    <<EOF
+set -e
+
+cd /tmp/qt/build-webengine
 cmake --build . -j${NUM_JOBS}
+EOF
+
+RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-26.04,sharing=locked \
+    <<EOF
+set -e
+
+cd /tmp/qt/build-webengine
 cmake --install .
 EOF
 
