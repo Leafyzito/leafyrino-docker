@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.4
 # cmake
 FROM ubuntu:24.04 AS build-cmake
 
@@ -246,35 +245,16 @@ cmake --build . -j${NUM_JOBS}
 cmake --install .
 EOF
 
-FROM build-qt AS build-qt-webengine
-
 # Qt WebEngine must be built separately (Chromium); static builds are unsupported.
-# Cache mount persists ninja progress across CI retries (see workflow buildcache tag).
-RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-24.04,sharing=locked \
-    <<EOF
+RUN <<EOF
 set -e
 
-mkdir -p /tmp/qt/build-webengine
+mkdir /tmp/qt/build-webengine
 cd /tmp/qt/build-webengine
 
-if [ ! -f CMakeCache.txt ]; then
-    /usr/local-qt/bin/qt-configure-module /tmp/qt/qt5/qtwebengine
-fi
-EOF
+/usr/local-qt/bin/qt-configure-module /tmp/qt/qt5/qtwebengine
 
-RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-24.04,sharing=locked \
-    <<EOF
-set -e
-
-cd /tmp/qt/build-webengine
 cmake --build . -j${NUM_JOBS}
-EOF
-
-RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-24.04,sharing=locked \
-    <<EOF
-set -e
-
-cd /tmp/qt/build-webengine
 cmake --install .
 EOF
 
@@ -285,7 +265,7 @@ FROM ubuntu:24.04
 
 COPY --from=build-cmake /usr/local-cmake /usr/local-cmake
 COPY --from=build-boost /usr/local-boost /usr/local-boost
-COPY --from=build-qt-webengine /usr/local-qt /usr/local-qt
+COPY --from=build-qt /usr/local-qt /usr/local-qt
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8

@@ -21,18 +21,16 @@ jobs:
     name: "Build ${{ matrix.image-name }} builder"
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
         include:
           # The Dockerfile file name will be inferred from the image-name parameter
           # If the image-name is chatterino2-xd, the Dockerfile it will look for is Dockerfile_chatterino2-xd
-          # Disabled until WebEngine CI builds are stable
-          # - os: ubuntu-22.04
-          #   image-name: chatterino2-build-ubuntu-22.04
+          - os: ubuntu-22.04
+            image-name: chatterino2-build-ubuntu-22.04
           - os: ubuntu-24.04
             image-name: chatterino2-build-ubuntu-24.04
-          # - os: ubuntu-26.04
-          #   image-name: chatterino2-build-ubuntu-26.04
+          - os: ubuntu-26.04
+            image-name: chatterino2-build-ubuntu-26.04
     env:
       C2_PLUGINS: "ON"
       C2_BUILD_WITH_QT6: "ON"
@@ -66,9 +64,9 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-        id: buildx
 
       - name: Log into docker registry
+        if: github.event_name == 'push'
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
         with:
           registry: ${{ env.REGISTRY }}
@@ -76,35 +74,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build docker image
-        id: build
         uses: docker/build-push-action@v7
         with:
-          builder: ${{ steps.buildx.outputs.name }}
           context: .
           push: false
           load: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           file: ./chatterino-docker/Dockerfile_${{ matrix.image-name }}
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            type=gha
-          cache-to: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-            type=gha,mode=max
-
-      - name: Push build cache
-        if: always() && steps.build.outcome == 'failure'
-        run: |
-          docker buildx build \
-            --builder "${{ steps.buildx.outputs.name }}" \
-            --file "./chatterino-docker/Dockerfile_${{ matrix.image-name }}" \
-            --cache-from "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache" \
-            --cache-from "type=gha" \
-            --cache-to "type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max" \
-            --cache-to "type=gha,mode=max" \
-            --target build-qt \
-            .
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}
+          cache-to: type=inline
 
       # Build Chatterino master with this docker image
       - name: Test docker image
@@ -121,18 +99,12 @@ jobs:
         if: github.event_name == 'push'
         uses: docker/build-push-action@v7
         with:
-          builder: ${{ steps.buildx.outputs.name }}
           context: .
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           file: ./chatterino-docker/Dockerfile_${{ matrix.image-name }}
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            type=gha
-          cache-to: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-            type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}
+          cache-to: type=inline
 
   build-c2-generic:
     name: "Build ${{ matrix.image-name }} generic"
