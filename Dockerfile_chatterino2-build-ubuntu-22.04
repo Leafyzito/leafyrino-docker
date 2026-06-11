@@ -246,6 +246,8 @@ cmake --build . -j${NUM_JOBS}
 cmake --install .
 EOF
 
+FROM build-qt AS build-qt-webengine
+
 # Qt WebEngine must be built separately (Chromium); static builds are unsupported.
 # Cache mount persists ninja progress across CI retries (see workflow buildcache tag).
 RUN --mount=type=cache,target=/tmp/qt/build-webengine,id=leafyrino-webengine-22.04,sharing=locked \
@@ -283,7 +285,7 @@ FROM ubuntu:22.04
 
 COPY --from=build-cmake /usr/local-cmake /usr/local-cmake
 COPY --from=build-boost /usr/local-boost /usr/local-boost
-COPY --from=build-qt /usr/local-qt /usr/local-qt
+COPY --from=build-qt-webengine /usr/local-qt /usr/local-qt
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LC_ALL=en_US.UTF-8
